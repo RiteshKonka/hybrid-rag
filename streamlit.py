@@ -1,11 +1,11 @@
 
-from langchain.document_loaders import PyPDFDirectoryLoader,DirectoryLoader
-from langchain.vectorstores import FAISS
+from langchain_community.document_loaders import DirectoryLoader
+from langchain_community.vectorstores import FAISS
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.llms import openai
+from langchain_community.llms import openai
 from langchain.chains.conversational_retrieval.base import ConversationalRetrievalChain
-from langchain.embeddings import HuggingFaceEmbeddings
-from langchain.chat_models import ChatOpenAI
+from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_community.chat_models import ChatOpenAI
 
 import streamlit as st
 import os
@@ -47,7 +47,7 @@ def streamlit_ui():
                 st.success('Document(s) uploaded successfully!')
 
 
-def RAG(docs):
+def RAG(docs,query):
     #load the document
     for source_docs in docs:
         with tempfile.NamedTemporaryFile(delete=False,dir=TEMP_DIR.as_posix(),suffix='.pdf') as temp_file:
@@ -81,31 +81,36 @@ def RAG(docs):
     )
 
     chat_history = []
-    #Initialize chat history
-    if "messages" not in st.session_state:
-        st.session_state.messages =[]
-    
-    #Display chat messages from history on app rerun
-    for message in st.session_state.messages:
-        with st.chat_message(message["role"]):
-            st.markdown(message["content"])
-    
-    #React to user input
-    if prompt := st.chat_input("Ask question to document assistant"):
-        #Display user message in chat message container
-        st.chat_message("user").markdown(prompt)
-        #Add user message to chat history
-        st.session_state.messages.append({"role":"user","context":prompt})
+    result = qa_chain({'question':query,'chat_history':chat_history})
+    st.write(result['answer'])
+    chat_history.append({query,result['answer']})
 
-        response = f"Echo: {prompt}"
-        #Display assistant response in chat message container
-        response = qa_chain({'question':prompt,'chat_history':chat_history})
 
-        with st.chat_message("assistant"):
-            st.markdown(response['answer'])
+    # #Initialize chat history
+    # if "messages" not in st.session_state:
+    #     st.session_state.messages =[]
+    
+    # #Display chat messages from history on app rerun
+    # for message in st.session_state.messages:
+    #     with st.chat_message(message["role"]):
+    #         st.markdown(message["content"])
+    
+    # #React to user input
+    # if prompt := st.chat_input("Ask question to document assistant"):
+    #     #Display user message in chat message container
+    #     st.chat_message("user").markdown(prompt)
+    #     #Add user message to chat history
+    #     st.session_state.messages.append({"role":"user","context":prompt})
+
+    #     response = f"Echo: {prompt}"
+    #     #Display assistant response in chat message container
+    #     response = qa_chain({'question':prompt,'chat_history':chat_history})
+
+    #     with st.chat_message("assistant"):
+    #         st.markdown(response['answer'])
         
-        st.session_state.messages.append({'role':"assistant", "content":response})
-        chat_history.append({prompt,response['answer']})
+    #     st.session_state.messages.append({'role':"assistant", "content":response})
+    #     chat_history.append({prompt,response['answer']})
 
 
 if __name__ == "__main__":
